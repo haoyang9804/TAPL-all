@@ -1,0 +1,9 @@
+[submodule "TAPL-Ocaml"]
+	path = TAPL-Ocaml
+	url = git@github.com:haoyang9804/TAPL-Ocaml.git
+[submodule "tapl-scala"]
+	path = tapl-scala
+	url = git@github.com:haoyang9804/tapl-scala.git
+[submodule "TAPL-Coq"]
+	path = TAPL-Coq
+	url = git@github.com:haoyang9804/TAPL-Coq.git
