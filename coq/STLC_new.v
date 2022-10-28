@@ -56,6 +56,9 @@ Inductive evaluate : term -> term -> Prop :=
     evaluate t1 t1' ->
     evaluate (if_then_else t1 t2 t3) (if_then_else t1' t2 t3).
 
+Notation "x \-> y" := (evaluate x y) (at level 50, left associativity).
+
+
 Inductive typeCheck : term -> type -> Prop :=
   | CheckTrue : typeCheck (boolean true) B
   | CheckFalse : typeCheck (boolean false) B
@@ -66,7 +69,7 @@ Inductive typeCheck : term -> type -> Prop :=
     typeCheck (if_then_else t1 t2 t3) T
   | CheckZero : typeCheck zero N
   | CheckSucc :
-    forall (t:term) t,
+    forall (t:term),
     typeCheck t N ->
     typeCheck (succ t) N
   | CheckPred :
@@ -78,9 +81,11 @@ Inductive typeCheck : term -> type -> Prop :=
     typeCheck t N ->
     typeCheck (iszero t) B.
 
+Notation "t :: T" := (typeCheck t T).
+
 (* A trick here *)
 Lemma typeCheck_number_is_not_B:
-forall t, nvalue t -> typeCheck t B -> False.
+forall t, nvalue t -> t :: B -> False.
 Proof.
   intros. 
   induction H; inversion H0. 
@@ -89,7 +94,7 @@ Qed.
 (** [Canonical Form (Page 127) (1)] If [v] is a value of type [Bool],
 then [v] is either [true] or [false]*)
 Lemma boolvalue_only_contains_true_or_false :
-forall (t:term), value t -> typeCheck t B -> t = boolean true \/ t = boolean false.
+forall (t:term), value t -> t :: B -> t = boolean true \/ t = boolean false.
 Proof.
   intros. remember t as t'. remember B as T. induction H0.
   - left. reflexivity.
@@ -121,8 +126,8 @@ Qed. *)
 
 
 (* [exists (tp : type), typeCheck t tp] means term [t] is well-typed *)
-Theorem Progress : forall (t:term), (exists (tp : type), typeCheck t tp) -> 
-  value t \/ (exists (t':term), evaluate t t').
+Theorem Progress : forall (t:term), (exists (tp : type), t :: tp) -> 
+  value t \/ (exists (t':term), t \-> t').
 Proof. 
   intros. destruct H. 
   induction H.
@@ -178,47 +183,16 @@ Proof.
       apply H0.
 Qed. 
 
-(* Lemma evaluate_B_is_B :
-forall (t1 t2 : term), typeCheck t1 B -> evaluate t1 t2 -> typeCheck t2 B.
-Proof.
-  intros. remember B as B'. induction H.
-  - inversion H0.
-  - inversion H0.
-  - inversion H0. 
-    + rewrite <- H3. apply H1.
-    + rewrite <- H3. apply H2.
-    + apply IHtypeCheck2 IN
-  
-  inversion H.
-  - rewrite <- H1 in H0. inversion H0.
-  - rewrite <- H1 in H0. inversion H0.
-  -   
-Qed. *)
-
-(* Lemma if_B_evaluate_B :
-forall (t1 t2 t3 t':term), typeCheck t1 B -> typeCheck t2 B -> typeCheck t3 B -> evaluate (if_then_else t1 t2 t3) t' -> typeCheck t' B.
-Proof.
-  intros. 
-  inversion H2.
-  - rewrite <- H3. apply H0.
-  - rewrite <- H3. apply H1.
-  - 
-  
-  remember (if_then_else t1 t2 t3) as if_. induction H2; try discriminate.
-  - injection Heqif_; intros. rewrite H3. apply H0.
-  - injection Heqif_; intros. rewrite H2. apply H1.
-  - injection Heqif_; intros. rewrite H3. rewrite H4. rewrite H5 in H2. rewrite H5 in IHevaluate.
-    clear H3. clear H4. clear H5. clear Heqif_.
-
-Qed. *)
-
+Axiom pred_succ_is_itself:
+forall (t:term), pred (succ t) = t.
 
 (** If [t] : [T] and [t] -> [t'], then [t'] : [T]*)
 Theorem Preservation :
-forall (t t':term) (T:type), typeCheck t T -> evaluate t t' -> typeCheck t' T.
+forall (t t':term) (T:type), t :: T -> (t \-> t') -> t' :: T.
 Proof. (* induction on type system , could also do induction on evaluation*)
-  intros. generalize dependent t'.
-  induction H; intros.
+  intros.
+  generalize dependent t'.
+   induction H; intros.
   - inversion H0. (* cannot evaluate (boolean true)*)
   - inversion H0. (* cannot evaluate (boolean false)*)
   - remember B as B'. destruct H.
@@ -230,17 +204,36 @@ Proof. (* induction on type system , could also do induction on evaluation*)
       -- inversion H6.
     + rewrite HeqB' in H3;
       rewrite HeqB' in H4;
+      rewrite HeqB' in IHtypeCheck1.
       clear HeqB'.
       inversion H2.
       apply CheckIf.
-      -- inversion H9.
-         ++ rewrite <- H11 in H9. inversion_clear H9. 
-            --- rewrite <- H10. apply H3.
-            --- inversion H14.
-         ++ rewrite <- H11 in H9. inversion_clear H9.
-            --- rewrite <- H10. apply H4.
-            --- inversion H14.
-         ++ assert (H__: typeCheck (if_then_else t1'0 t0 t4) B) by admit. apply H__.
-      --  
-            
+      -- apply IHtypeCheck1 in H9. apply H9. (* auto *)
+      -- apply H0.
+      -- apply H1.
+    + discriminate.
+    + discriminate.
+    + discriminate.
+    + inversion H2. apply CheckIf.
+      -- auto.
+      -- apply H0.
+      -- apply H1.
+  - inversion H0.
+  - inversion H0; clear H1.
+    apply IHtypeCheck in H2. apply CheckSucc. apply H2.
+  - inversion H0.
+    + apply CheckZero.
+    + admit.
+      (* rewrite <- H1 in H0; rewrite <- H1 in H; rewrite <- H1 in IHtypeCheck; clear H1.
+      generalize dependent t0. 
+      induction H2.
+      -- intros. apply CheckZero.
+      -- intros.
+         assert (H_: succ (pred t1) :: N) by admit.
+         apply IHnvalue in H_.  *)
+    + apply IHtypeCheck in H2. apply CheckPred. apply H2.
+  - inversion H0.
+    + apply CheckTrue.
+    + apply CheckFalse.
+    + apply IHtypeCheck in H2. apply CheckIszero. apply H2.             
 Qed.
