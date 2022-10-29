@@ -186,6 +186,14 @@ Qed.
 Axiom pred_succ_is_itself:
 forall (t:term), pred (succ t) = t.
 
+Lemma succ_t_is_of_N_then_t_is_also_of_N :
+forall (t:term), succ t :: N -> t :: N.
+Proof.
+  intros.
+  inversion H.
+  apply H1.
+Qed.
+
 (** If [t] : [T] and [t] -> [t'], then [t'] : [T]*)
 Theorem Preservation :
 forall (t t':term) (T:type), t :: T -> (t \-> t') -> t' :: T.
@@ -223,14 +231,8 @@ Proof. (* induction on type system , could also do induction on evaluation*)
     apply IHtypeCheck in H2. apply CheckSucc. apply H2.
   - inversion H0.
     + apply CheckZero.
-    + admit.
-      (* rewrite <- H1 in H0; rewrite <- H1 in H; rewrite <- H1 in IHtypeCheck; clear H1.
-      generalize dependent t0. 
-      induction H2.
-      -- intros. apply CheckZero.
-      -- intros.
-         assert (H_: succ (pred t1) :: N) by admit.
-         apply IHnvalue in H_.  *)
+    + rewrite <- H1 in H; rewrite <- H3.
+      apply succ_t_is_of_N_then_t_is_also_of_N in H. apply H.
     + apply IHtypeCheck in H2. apply CheckPred. apply H2.
   - inversion H0.
     + apply CheckTrue.
