@@ -1,0 +1,4 @@
+(executable
+ (public_name f)
+ (name main)
+ (libraries core arith))
